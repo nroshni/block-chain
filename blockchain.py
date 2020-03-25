@@ -201,4 +201,3 @@ while waiting_for_input:
 else:
     print('** User exited **')
 print(f'Final Blockchain : {block_chain}')
-# empty comment
