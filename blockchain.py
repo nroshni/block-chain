@@ -1,42 +1,124 @@
 import json
-import hashlib
+import pickle
 import functools
 from collections import OrderedDict
+
+from hash_utils import hash_block, hash_string_sha256
 
 # Reward given to the miners for creating new blocks
 MINING_REWARD = 10
 
-# First block/ Starting block of the block chain
-genesis_block = {
-    'previous_hash': '',
-    'index': 0,
-    'transactions': [],
-    'proof': 100
-}
 # Initializing the blockchain
-block_chain = [genesis_block]
+block_chain = []
 open_transactions = []
 owner = 'Roshni'
 # Registered participants of the blockchain (senders/ receivers)
 participants = set([owner])
 
 
-def hash_block(block):
-    """ Returns the hash of the block """
-    # return '-'.join([str(block[key]) for key in block])
-    return hashlib.sha256(json.dumps(block,
-                                     sort_keys=True).encode()).hexdigest()
+def load_data():
+    global genesis_block, block_chain, open_transactions
+    try:
+        with open('blockchain_data.txt', mode='r') as f:
+            file_content = f.readlines()
+
+            # Load block chain as OrderedDicts as hashing is performed on OrderedDict
+            block_chain = json.loads(file_content[0][:-1])
+            updated_block_chain = []
+            for block in block_chain:
+                updated_block = {
+                    'previous_hash': block['previous_hash'], \
+                    'index': block['index'],
+                    'proof': block['proof'],
+                    'transactions': [
+                        OrderedDict([('sender', tx['sender']),
+                                     ('recipient', tx['recipient']),
+                                     ('amount', tx['amount'])])
+                        for tx in block['transactions']
+                    ]
+                }
+                updated_block_chain.append(updated_block)
+            block_chain = updated_block_chain
+
+            # Load Open transactions as OrderedDicts as hashing is performed on OrderedDict
+            open_transactions = json.loads(file_content[1])
+            updated_transactions = []
+            for tx in open_transactions:
+                updated_transaction = OrderedDict([('sender', tx['sender']),
+                                                   ('recipient',
+                                                    tx['recipient']),
+                                                   ('amount', tx['amount'])])
+                updated_transactions.append(updated_transaction)
+            open_transactions = updated_transactions
+    except IOError as e:
+        print("File not found. Initializing blockchain.")
+        # First block/ Starting block of the block chain
+        genesis_block = {
+            'previous_hash': '',
+            'index': 0,
+            'transactions': [],
+            'proof': 100
+        }
+        block_chain = [genesis_block]
+        open_transactions = []
+
+
+def save_data():
+    try:
+        with open('blockchain_data.txt', mode='w') as f:
+            f.write(json.dumps(block_chain))
+            f.write('\n')
+            f.write(json.dumps(open_transactions))
+    except IOError:
+        print("Saving failed.")
+
+
+def load_data_pickle():
+    global block_chain, open_transactions
+
+    with open('blockchain_data.pkl', mode='rb') as f:
+        file_content = pickle.loads(f.read())
+        block_chain = file_content['block_chain']
+        open_transactions = file_content['open_tx']
+
+
+def save_data_pickle():
+    with open('blockchain_data.pkl', mode='wb') as f:
+        content = {'block_chain': block_chain, 'open_tx': open_transactions}
+        f.write(pickle.dumps(content))
 
 
 def valid_proof(transactions, previous_hash, proof):
+    """
+    Function to check if the proof satisfies the hashing condition
+
+    Parameters
+    ----------
+        transactions (list): List of open transactions
+        previous_hash (string): Hash of the previous block
+        proof (integer): proof of work
+
+    Returns
+    -------
+        True: If the proof satisfies the mentioned condition
+        False: If the proof doesn't satisfy the mentioned condition
+    """
     guess = (str(transactions) + str(previous_hash) + str(proof)).encode()
-    guessed_hash = hashlib.sha256(guess).hexdigest()
+    guessed_hash = hash_string_sha256(guess)
 
     print(f'Guessed hash : {guessed_hash}')
     return guessed_hash[0:2] == '00'
 
 
 def proof_of_work():
+    """
+    Function to find the valid proof of work that the proof validation condition
+
+    Returns
+    -------
+        proof (integer): Proof of work which satisfies condition
+
+    """
     last_block = block_chain[-1]
     last_hash = hash_block(last_block)
     proof = 0
@@ -52,11 +134,11 @@ def get_balances(participant):
     and open transactions)
     Parameters
     ----------
-    participant (string): The sender's name
+        participant (string): The sender's name
 
     Returns
     -------
-    balance funds (float): The balance fund of the participant
+        balance funds (float): The balance fund of the participant
     """
     tx_sender = [[
         tx['amount'] for tx in block['transactions']
@@ -96,13 +178,13 @@ def verify_transaction(transaction):
 
     Parameters
     ----------
-    transaction (dict): A transaction containing the sender,
-                        recipient and the transaction amount
+        transaction (dict): A transaction containing the sender,
+                            recipient and the transaction amount
 
     Returns
     -------
-    :True (Boolean): If the transaction is valid
-    :False (Boolean): If the transaction is invalid
+        True (Boolean): If the transaction is valid
+        False (Boolean): If the transaction is invalid
     """
     sender_balance = get_balances(transaction['sender'])
     if transaction['amount'] > sender_balance:
@@ -114,13 +196,13 @@ def add_transaction(recipient, sender=owner, amount=1.0):
     """
     Adds a new transaction (if valid) to the list of open transactions.
 
-    Arguments:
-        :sender (String): The sender of the coins
-        :recipient (String): The recipient of the coins
-        :amount (float): The amount of coins sent in the transaction
+    Parameters
+    ----------
+        sender (String): The sender of the coins
+        recipient (String): The recipient of the coins
+        amount (float): The amount of coins sent in the transaction
                         (default = 1.0)
     """
-    # transaction = {"sender": sender, "recipient": recipient, "amount": amount}
     # Creating a ordered dictionary as Dicts are out of order and
     # we need them to be ordered when calculating hashes. Differently
     # ordered dicts create different hashes.
@@ -130,6 +212,7 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         open_transactions.append(transaction)
         participants.add(sender)
         participants.add(recipient)
+        save_data()
         return True
     return False
 
@@ -145,11 +228,7 @@ def mine_block():
 
     proof = proof_of_work()
     # Rewarding users who mine blocks is a way to get coins into the blockchain
-    # reward_transaction = {
-    #     'sender': 'MINING',
-    #     'recipient': owner,
-    #     'amount': MINING_REWARD
-    # }
+
     # Creating a ordered dictionary as Dicts are out of order and
     # we need them to be ordered when calculating hashes. Differently
     # ordered dicts create different hashes.
@@ -171,6 +250,7 @@ def mine_block():
     }
     block_chain.append(block)
     open_transactions = []
+    save_data()
 
 
 def get_transaction_values():
@@ -195,8 +275,8 @@ def verify_chain():
     Function to verify if the current blockchain is valid.
     Returns
     -------
-    True (Boolean): If blockchain is valid
-    False (Boolean): If blockchain is invalid
+        True (Boolean): If blockchain is valid
+        False (Boolean): If blockchain is invalid
     """
     for index, block in enumerate(block_chain):
         if index == 0:
@@ -220,6 +300,7 @@ def verify_transactions():
 
 
 waiting_for_input = True
+load_data()
 
 while waiting_for_input:
     print(f'#' * 20)
