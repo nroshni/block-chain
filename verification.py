@@ -2,7 +2,8 @@ from hash_utils import hash_block, hash_string_sha256
 
 
 class Verification:
-    def valid_proof(self, transactions, previous_hash, proof):
+    @staticmethod
+    def valid_proof(transactions, previous_hash, proof):
         """
         Function to check if the proof satisfies the hashing condition
 
@@ -21,10 +22,10 @@ class Verification:
         guess = (str(ordered_tx) + str(previous_hash) + str(proof)).encode()
         guessed_hash = hash_string_sha256(guess)
 
-        print(f'Guessed hash : {guessed_hash}')
         return guessed_hash[0:2] == '00'
 
-    def verify_chain(self, block_chain):
+    @classmethod
+    def verify_chain(cls, block_chain):
         """
         Function to verify if the current blockchain is valid.
         Returns
@@ -40,14 +41,15 @@ class Verification:
                 return False
             # Eliminate the reward transaction when checking if the proof is a valid
             # proof that would satisfy the given hash condition
-            if not self.valid_proof(block.transactions[:-1],
-                                    block.previous_hash, block.proof):
+            if not cls.valid_proof(block.transactions[:-1],
+                                   block.previous_hash, block.proof):
                 print('Proof of work is invalid')
                 return False
 
         return True
 
-    def verify_transaction(self, transaction, get_balances):
+    @staticmethod
+    def verify_transaction(transaction, get_balances):
         """
         Function that validates if a given transaction is valid based on
         the amount of funds the sender of the transaction has
@@ -62,14 +64,15 @@ class Verification:
             True (Boolean): If the transaction is valid
             False (Boolean): If the transaction is invalid
         """
-        sender_balance = get_balances(transaction.sender)
+        sender_balance = get_balances()
         if transaction.amount > sender_balance:
             return False
         return True
 
-    def verify_transactions(self, open_transactions, get_balances):
+    @classmethod
+    def verify_transactions(cls, open_transactions, get_balances):
         """ Function to verify if all the open transactions are valid """
         return all([
-            self.verify_transaction(tx, get_balances)
+            cls.verify_transaction(tx, get_balances)
             for tx in open_transactions
         ])
