@@ -1,5 +1,4 @@
 import json
-import pickle
 import functools
 
 from hash_utils import hash_block

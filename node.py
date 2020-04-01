@@ -1,4 +1,3 @@
-from uuid import uuid4
 from blockchain import BlockChain
 from verification import Verification
 
@@ -45,9 +44,8 @@ class Node:
                     print("Added Transaction")
                 else:
                     print("Transaction Failed")
-                print(
-                    f'Open transactions : {self.block_chain.get_open_transactions()}'
-                )
+                print('Open transactions : {}'.format(
+                    self.block_chain.get_open_transactions()))
             elif user_choice == '2':
                 self.print_blockchain_elements()
             elif user_choice == '3':
@@ -68,9 +66,8 @@ class Node:
                 print("Block chain - INVALIDATED")
                 break
 
-            print(
-                f'Balance of  {self.id} : {self.block_chain.get_balances():.2f}'
-            )
+            print('Balance of {}: {:.2f}'.format(
+                self.id, self.block_chain.get_balances()))
         else:
             print('** User exited **')
         print(f'Final Blockchain : {self.block_chain.get_chain()}')

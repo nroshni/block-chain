@@ -9,7 +9,9 @@ class Transaction(Printable):
         self.amount = amount
 
     def to_ordered_dict(self):
-        """ Returns ordered dict of the transaction attributes for consistent hashing """
+        """
+        Returns ordered dict of the transaction for consistent hashing
+        """
         return OrderedDict([('sender', self.sender),
                             ('recipient', self.recipient),
                             ('amount', self.amount)])

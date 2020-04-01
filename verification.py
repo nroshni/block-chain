@@ -39,8 +39,8 @@ class Verification:
                 continue
             if block.previous_hash != hash_block(block_chain[index - 1]):
                 return False
-            # Eliminate the reward transaction when checking if the proof is a valid
-            # proof that would satisfy the given hash condition
+            # Eliminate the reward transaction when checking if the proof is
+            # a valid proof that would satisfy the given hash condition
             if not cls.valid_proof(block.transactions[:-1],
                                    block.previous_hash, block.proof):
                 print('Proof of work is invalid')
