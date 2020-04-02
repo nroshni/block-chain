@@ -1,5 +1,8 @@
 import json
+import logging
 import hashlib
+
+logger = logging.getLogger(__name__)
 
 
 def hash_string_sha256(sstring):
@@ -8,6 +11,7 @@ def hash_string_sha256(sstring):
 
 def hash_block(block):
     """ Returns the hash of the block """
+    logger.info("Computing hash of the block")
     hashable_block = block.__dict__.copy()  # Create a copy as it would
     # otherwise change the prev dict while hashing
     # Convert transaction objects within a block to dictionaries as well

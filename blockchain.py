@@ -1,4 +1,5 @@
 import json
+import logging
 import functools
 
 from hash_utils import hash_block
@@ -8,12 +9,13 @@ from verification import Verification
 
 # Reward given to the miners for creating new blocks
 MINING_REWARD = 10
+logger = logging.getLogger(__name__)
 
 
 class BlockChain:
     def __init__(self, hosting_node_id):
         # Starting block of the block chain
-        genesis_block = Block(0, '', [], 100)
+        genesis_block = Block(0, '', [], 100, 0)
         # Initializing the blockchain
         self.__chain = [genesis_block]
         # Handling open transactions
@@ -66,6 +68,7 @@ class BlockChain:
                 "Handled exception - Initialized blockchain to Genesis block.")
 
     def save_data(self):
+        logger.info('Saving block chain state.')
         try:
             with open('blockchain_data.txt', mode='w') as f:
                 # Convert both block objs and transaction objs within each block to dicts
@@ -73,15 +76,17 @@ class BlockChain:
                     block.__dict__ for block in [
                         Block(block_el.index, block_el.previous_hash,
                               [tx.__dict__ for tx in block_el.transactions],
-                              block_el.proof) for block_el in self.__chain
+                              block_el.proof, block_el.timestamp)
+                        for block_el in self.__chain
                     ]
                 ]
                 f.write(json.dumps(saveable_chain))
                 f.write('\n')
                 saveable_tx = [tx.__dict__ for tx in self.__open_transactions]
+                logger.info(f'Saving open transactions: {saveable_tx}')
                 f.write(json.dumps(saveable_tx))
         except IOError:
-            print("Saving failed.")
+            logger.error("Saving failed.")
 
     def proof_of_work(self):
         """
@@ -92,6 +97,7 @@ class BlockChain:
             proof (integer): Proof of work which satisfies condition
 
         """
+        logger.info('Finding proof of work')
         last_block = self.__chain[-1]
         last_hash = hash_block(last_block)
         proof = 0
@@ -114,6 +120,9 @@ class BlockChain:
             balance funds (float): The balance fund of the participant
         """
         participant = self.hosting_node
+
+        logger.info(f'Computing Fund balance of user {participant }')
+
         tx_sender = [[
             tx.amount for tx in block.transactions if tx.sender == participant
         ] for block in self.__chain]
@@ -127,6 +136,10 @@ class BlockChain:
         amount_sent = functools.reduce(
             lambda tx_sum, tx_amt: tx_sum + sum(tx_amt), tx_sender, 0)
 
+        logger.debug(
+            f'Total amounts sent (processed + open transactions) : {amount_sent}'
+        )
+
         tx_recipient = [[
             tx.amount for tx in block.transactions
             if tx.recipient == participant
@@ -134,6 +147,10 @@ class BlockChain:
 
         amount_received = functools.reduce(
             lambda tx_sum, tx_amt: tx_sum + sum(tx_amt), tx_recipient, 0)
+
+        logger.debug(
+            f'Total amounts received (processed transactions) : {amount_received}'
+        )
 
         return amount_received - amount_sent
 
@@ -158,6 +175,8 @@ class BlockChain:
         transaction = Transaction(sender, recipient, amount)
 
         if Verification.verify_transaction(transaction, self.get_balances):
+            logger.info(
+                'Valid transaction. Adding to list of open transactions.')
             self.__open_transactions.append(transaction)
             self.save_data()
             return True
@@ -171,10 +190,13 @@ class BlockChain:
 
         last_block = self.__chain[-1]
         hashed_block = hash_block(last_block)
+        logger.debug(f'Computed hash of previous block: {hashed_block}')
 
         proof = self.proof_of_work()
+        logger.debug(f'Found valid proof: {proof}')
 
         # Rewarding users who mine blocks is a way to get coins into the blockchain
+        logger.info('Creating Mining Reward Transaction')
         reward_transaction = Transaction('MINING', self.hosting_node,
                                          MINING_REWARD)
 
@@ -184,8 +206,10 @@ class BlockChain:
         copied_transactions.append(reward_transaction)
         self.__open_transactions.append(reward_transaction)
 
+        logger.debug('Creating new block with all open + reward transactions')
         block = Block(len(self.__chain), hashed_block, copied_transactions,
                       proof)
+
         self.__chain.append(block)
         self.__open_transactions = []
         self.save_data()

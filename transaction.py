@@ -1,5 +1,8 @@
+import logging
 from collections import OrderedDict
 from printable import Printable
+
+logger = logging.getLogger(__name__)
 
 
 class Transaction(Printable):
@@ -7,6 +10,7 @@ class Transaction(Printable):
         self.sender = sender
         self.recipient = recipient
         self.amount = amount
+        logger.info('Initializing transaction: {}'.format(self.__dict__))
 
     def to_ordered_dict(self):
         """

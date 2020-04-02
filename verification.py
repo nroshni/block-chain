@@ -1,4 +1,7 @@
+import logging
 from hash_utils import hash_block, hash_string_sha256
+
+logger = logging.getLogger(__name__)
 
 
 class Verification:
@@ -33,17 +36,25 @@ class Verification:
             True (Boolean): If blockchain is valid
             False (Boolean): If blockchain is invalid
         """
+        logger.info('Verifying validity of block chain')
         for index, block in enumerate(block_chain):
             if index == 0:
                 # No need to validate as the 1st block is always the genesis block
                 continue
-            if block.previous_hash != hash_block(block_chain[index - 1]):
+            computed_previous_hash = hash_block(block_chain[index - 1])
+            if block.previous_hash != computed_previous_hash:
+                logger.warning(
+                    f'Computed hash {computed_previous_hash} for [block_index: {index-1} | block : {block_chain[index-1].__dict__}] is not equal to the \
+                    previous hash mentioned in the [block_index: {index} | block : {block.__dict__}]'
+                )
                 return False
             # Eliminate the reward transaction when checking if the proof is
             # a valid proof that would satisfy the given hash condition
             if not cls.valid_proof(block.transactions[:-1],
                                    block.previous_hash, block.proof):
-                print('Proof of work is invalid')
+                logger.warning(
+                    f'Proof of work is invalid in [block_index: {index} | block : {block.__dict__}]'
+                )
                 return False
 
         return True
@@ -66,6 +77,9 @@ class Verification:
         """
         sender_balance = get_balances()
         if transaction.amount > sender_balance:
+            logger.warning(
+                'Transaction amount higher than available funds || Transaction: {} & Available funds: {}'
+                .format(transaction, sender_balance))
             return False
         return True
 
