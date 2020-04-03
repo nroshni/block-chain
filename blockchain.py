@@ -2,10 +2,10 @@ import json
 import logging
 import functools
 
-from hash_utils import hash_block
 from block import Block
 from transaction import Transaction
-from verification import Verification
+from utils.hash_utils import hash_block
+from utils.verification import Verification
 
 # Reward given to the miners for creating new blocks
 MINING_REWARD = 10

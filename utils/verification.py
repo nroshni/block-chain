@@ -1,10 +1,13 @@
 import logging
-from hash_utils import hash_block, hash_string_sha256
+from utils.hash_utils import hash_block, hash_string_sha256
 
 logger = logging.getLogger(__name__)
 
 
 class Verification:
+    """
+    A helper class which provides various static and class based verification functions
+    """
     @staticmethod
     def valid_proof(transactions, previous_hash, proof):
         """
