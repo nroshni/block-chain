@@ -1,7 +1,7 @@
 import os
 import logging
 from blockchain import BlockChain
-from verification import Verification
+from utils.verification import Verification
 
 log_folder = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_folder):
@@ -96,7 +96,10 @@ class Node:
 
             logging.info('Balance of {}: {:.2f}'.format(
                 self.id, self.block_chain.get_balances()))
+            print('Balance of {}: {:.2f}'.format(
+                self.id, self.block_chain.get_balances()))
 
 
-node = Node()
-node.listen_for_input()
+if __name__ == "__main__":
+    node = Node()
+    node.listen_for_input()

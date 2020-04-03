@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from printable import Printable
+from utils.printable import Printable
 
 logger = logging.getLogger(__name__)
 
