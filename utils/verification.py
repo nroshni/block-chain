@@ -1,4 +1,5 @@
 import logging
+from wallet import Wallet
 from utils.hash_utils import hash_block, hash_string_sha256
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ class Verification:
         return True
 
     @staticmethod
-    def verify_transaction(transaction, get_balances):
+    def verify_transaction(transaction, get_balances, check_funds=True):
         """
         Function that validates if a given transaction is valid based on
         the amount of funds the sender of the transaction has
@@ -79,10 +80,14 @@ class Verification:
             False (Boolean): If the transaction is invalid
         """
         sender_balance = get_balances()
-        if transaction.amount > sender_balance:
-            logger.warning(
-                'Transaction amount higher than available funds || Transaction: {} & Available funds: {}'
-                .format(transaction, sender_balance))
+        if check_funds:
+            if transaction.amount > sender_balance:
+                logger.warning(
+                    'Transaction amount higher than available funds || Transaction: {} & Available funds: {}'
+                    .format(transaction, sender_balance))
+                return False
+        if not Wallet.verify_transaction_signature(transaction):
+            logger.warning('Invalid transaction signature.')
             return False
         return True
 
@@ -90,6 +95,6 @@ class Verification:
     def verify_transactions(cls, open_transactions, get_balances):
         """ Function to verify if all the open transactions are valid """
         return all([
-            cls.verify_transaction(tx, get_balances)
+            cls.verify_transaction(tx, get_balances, check_funds=False)
             for tx in open_transactions
         ])

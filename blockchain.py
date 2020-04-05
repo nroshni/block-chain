@@ -6,7 +6,7 @@ from block import Block
 from transaction import Transaction
 from utils.hash_utils import hash_block
 from utils.verification import Verification
-
+from wallet import Wallet
 # Reward given to the miners for creating new blocks
 MINING_REWARD = 10
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class BlockChain:
                 for block in block_chain:
                     ordered_tx = [
                         Transaction(tx['sender'], tx['recipient'],
-                                    tx['amount'])
+                                    tx['signature'], tx['amount'])
                         for tx in block['transactions']
                     ]
                     updated_block = Block(block['index'],
@@ -59,6 +59,7 @@ class BlockChain:
                 for tx in open_transactions:
                     updated_transaction = Transaction(tx['sender'],
                                                       tx['recipient'],
+                                                      tx['signature'],
                                                       tx['amount'])
                     updated_transactions.append(updated_transaction)
                 self.__open_transactions = updated_transactions
@@ -160,7 +161,7 @@ class BlockChain:
             return None
         return self.__chain[-1]
 
-    def add_transaction(self, recipient, sender, amount=1.0):
+    def add_transaction(self, recipient, sender, signature, amount=1.0):
         """
         Adds a new transaction (if valid) to the list of open transactions.
 
@@ -171,8 +172,10 @@ class BlockChain:
             amount (float): The amount of coins sent in the transaction
                             (default = 1.0)
         """
+        if self.hosting_node is None:
+            return False
 
-        transaction = Transaction(sender, recipient, amount)
+        transaction = Transaction(sender, recipient, signature, amount)
 
         if Verification.verify_transaction(transaction, self.get_balances):
             logger.info(
@@ -187,6 +190,9 @@ class BlockChain:
         Function to mine blocks from the list of open transactions.
         Also adds a reward transaction to the miner.
         """
+        if self.hosting_node is None:
+            logger.warning('No wallet aavilable.')
+            return False
 
         last_block = self.__chain[-1]
         hashed_block = hash_block(last_block)
@@ -197,12 +203,19 @@ class BlockChain:
 
         # Rewarding users who mine blocks is a way to get coins into the blockchain
         logger.info('Creating Mining Reward Transaction')
-        reward_transaction = Transaction('MINING', self.hosting_node,
+        reward_transaction = Transaction('MINING', self.hosting_node, '',
                                          MINING_REWARD)
 
         # Add the reward transaction to the list of
         # open transactions before mining the block
         copied_transactions = self.__open_transactions[:]
+
+        # Verify Transaction signatures before awarding the mining reward
+        for tx in copied_transactions:
+            if not Wallet.verify_transaction_signature(tx):
+                logger.warning('Invalid transaction signatures in the block')
+                return False
+
         copied_transactions.append(reward_transaction)
         self.__open_transactions.append(reward_transaction)
 

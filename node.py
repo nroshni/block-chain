@@ -2,6 +2,7 @@ import os
 import logging
 from blockchain import BlockChain
 from utils.verification import Verification
+from wallet import Wallet
 
 log_folder = os.path.join(os.getcwd(), 'logs')
 if not os.path.exists(log_folder):
@@ -16,8 +17,9 @@ logging.basicConfig(
 
 class Node:
     def __init__(self):
-        self.id = 'Roshni'
-        self.block_chain = BlockChain(self.id)
+        self.wallet = Wallet()
+        self.wallet.create_keys()
+        self.block_chain = BlockChain(self.wallet.public_key)
         logging.info('Initializing Node: {}'.format(self.__dict__))
 
     def get_transaction_values(self):
@@ -48,7 +50,9 @@ class Node:
             print(f'2: Output the blockchain blocks')
             print(f'3: Mine a new block')
             print(f'4: Check transaction validity')
-            print(f'q: Quit')
+            print(f'5: Create wallet')
+            print(f'6: Load wallet')
+            print(f'7: Save keys')
             logging.info('#' * 50)
             user_choice = self.get_user_choice()
 
@@ -56,20 +60,28 @@ class Node:
                 logging.info(f'Adding a new transaction')
                 tx_value = self.get_transaction_values()
                 tx_recipient, tx_amount = tx_value
+                signature = self.wallet.sign_transaction(
+                    self.wallet.public_key, tx_recipient, tx_amount)
                 if self.block_chain.add_transaction(tx_recipient,
-                                                    self.id,
+                                                    self.wallet.public_key,
+                                                    signature,
                                                     amount=tx_amount):
                     logging.info("Added Transaction")
                 else:
-                    logging.warning("Transaction Failed - Insufficient funds")
+                    logging.warning("Adding Transaction - Failed")
                 print('Open transactions : {}'.format(
                     self.block_chain.get_open_transactions()))
+
             elif user_choice == '2':
                 logging.info('Printing the blockchain blocks')
                 self.print_blockchain_elements()
+
             elif user_choice == '3':
                 logging.info('Mining a new block')
-                self.block_chain.mine_block()
+                if not self.block_chain.mine_block():
+                    logging.error('Mining failed.')
+                    print('Mining failed.')
+
             elif user_choice == '4':
                 logging.info(f'Checking transaction validity')
                 if Verification.verify_transactions(
@@ -80,9 +92,22 @@ class Node:
                 else:
                     logging.warning('There exists invalid transactions')
                     print('There exists invalid transactions')
+
+            elif user_choice == '5':
+                self.wallet.create_keys()
+                self.block_chain = BlockChain(self.wallet.public_key)
+
+            elif user_choice == '6':
+                self.wallet.load_keys()
+                self.block_chain = BlockChain(self.wallet.public_key)
+
+            elif user_choice == '7':
+                self.wallet.save_keys()
+
             elif user_choice == 'q' or user_choice == 'Q':
                 logging.info(f'Quitting block chain')
                 waiting_for_input = False
+
             else:
                 logging.info('Invalid User input')
                 print('Invalid input, please pick an option from the list!')
@@ -95,9 +120,9 @@ class Node:
                 logging.info("Valid block chain")
 
             logging.info('Balance of {}: {:.2f}'.format(
-                self.id, self.block_chain.get_balances()))
+                self.wallet.public_key, self.block_chain.get_balances()))
             print('Balance of {}: {:.2f}'.format(
-                self.id, self.block_chain.get_balances()))
+                self.wallet.public_key, self.block_chain.get_balances()))
 
 
 if __name__ == "__main__":

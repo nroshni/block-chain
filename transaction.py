@@ -6,10 +6,11 @@ logger = logging.getLogger(__name__)
 
 
 class Transaction(Printable):
-    def __init__(self, sender, recipient, amount):
+    def __init__(self, sender, recipient, signature, amount):
         self.sender = sender
         self.recipient = recipient
         self.amount = amount
+        self.signature = signature
         logger.info('Initializing transaction: {}'.format(self.__dict__))
 
     def to_ordered_dict(self):
