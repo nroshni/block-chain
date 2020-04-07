@@ -31,10 +31,12 @@ class Wallet:
                     f.write(self.public_key)
                     f.write("\n")
                     f.write(self.private_key)
+                return True
             except (IOError,
                     IndexError):  # IndexError - File exists but is empty
                 logger.error('Saving wallet failed')
                 print('Saving wallet failed')
+                return False
 
     def load_keys(self):
         """
@@ -46,9 +48,11 @@ class Wallet:
                 # All characters except the line break
                 self.public_key = keys[0][:-1]
                 self.private_key = keys[1]
+            return True
         except (IOError, IndexError):
             logger.error('Loading wallet failed')
             print('Loading wallet failed')
+            return False
 
     def generate_keys(self):
         """

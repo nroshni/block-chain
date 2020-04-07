@@ -120,6 +120,9 @@ class BlockChain:
         -------
             balance funds (float): The balance fund of the participant
         """
+        if self.hosting_node is None:
+            return None
+
         participant = self.hosting_node
 
         logger.info(f'Computing Fund balance of user {participant }')
@@ -191,8 +194,8 @@ class BlockChain:
         Also adds a reward transaction to the miner.
         """
         if self.hosting_node is None:
-            logger.warning('No wallet aavilable.')
-            return False
+            logger.warning('No wallet available.')
+            return None
 
         last_block = self.__chain[-1]
         hashed_block = hash_block(last_block)
@@ -214,7 +217,7 @@ class BlockChain:
         for tx in copied_transactions:
             if not Wallet.verify_transaction_signature(tx):
                 logger.warning('Invalid transaction signatures in the block')
-                return False
+                return None
 
         copied_transactions.append(reward_transaction)
         self.__open_transactions.append(reward_transaction)
@@ -226,4 +229,4 @@ class BlockChain:
         self.__chain.append(block)
         self.__open_transactions = []
         self.save_data()
-        return True
+        return block

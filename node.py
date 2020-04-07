@@ -1,3 +1,5 @@
+# import os
+# import logging
 from flask import Flask, jsonify
 from flask_cors import CORS
 
@@ -9,10 +11,89 @@ wallet = Wallet()
 block_chain = BlockChain(wallet.public_key)
 CORS(app)  # Open the App to clients running outside the server
 
+# log_folder = os.path.join(os.getcwd(), 'logs')
+# if not os.path.exists(log_folder):
+#     os.makedirs(log_folder)
+#
+# logging.basicConfig(
+#     level=logging.INFO,
+#     filename=os.path.join(log_folder, "Blockchain_LOG"),
+#     datefmt='%m-%d-%Y %I:%M:%S %p',
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-@app.route('/', methods=['GET'])
-def get_ui():
-    return 'This works'
+
+@app.route('/wallet', methods=['POST'])
+def create_keys():
+    global block_chain
+    wallet.create_keys()
+    if wallet.save_keys():
+        block_chain = BlockChain(wallet.public_key)
+        response = {
+            'public_key': wallet.public_key,
+            'private_key': wallet.private_key,
+            'funds': block_chain.get_balances()
+        }
+        return jsonify(response), 201
+    else:
+        response = {'message': 'Saving the keys failed'}
+        return jsonify(response), 500
+
+
+@app.route('/wallet', methods=['GET'])
+def load_keys():
+    global block_chain
+    if wallet.load_keys():
+        block_chain = BlockChain(wallet.public_key)
+        response = {
+            'public_key': wallet.public_key,
+            'private_key': wallet.private_key,
+            'funds': block_chain.get_balances()
+        }
+        return jsonify(response), 201
+    else:
+        response = {'message': 'Loading the keys failed'}
+        return jsonify(response), 500
+
+
+@app.route('/balance', methods=['GET'])
+def get_balance():
+    balance = block_chain.get_balances()
+    if balance:
+        response = {
+            'message': 'Fetched balance successfully',
+            'funds': balance
+        }
+        return jsonify(response), 200
+    response = {
+        'message': 'Loading balance failed',
+        'wallet_setup': wallet.public_key is not None
+    }
+    return jsonify(response), 500
+
+
+@app.route('/mine', methods=['POST'])
+def mine():
+    # logging.info('Mining a new block')
+    block = block_chain.mine_block()
+
+    if block is not None:
+        block_copy = block.__dict__.copy()
+        block_copy['transactions'] = [
+            tx.__dict__ for tx in block_copy['transactions']
+        ]
+        response = {
+            'message': 'Block added successfully',
+            'block': block_copy,
+            'funds': block_chain.get_balances()
+        }
+        return jsonify(response), 201
+    else:
+        # logging.error('Mining failed.')
+        response = {
+            'message': 'Mining a block failed.',
+            'wallet_setup': wallet.public_key is not None
+        }
+        return jsonify(response), 500
 
 
 @app.route('/chain', methods=['GET'])
@@ -21,6 +102,7 @@ def get_chain():
     presentable_chain = [block.__dict__.copy() for block in chain_snapshot]
     for block in presentable_chain:
         block['transactions'] = [tx.__dict__ for tx in block['transactions']]
+    # logging.info('Displaying the blockchain blocks')
     return jsonify(presentable_chain), 200
 
 
