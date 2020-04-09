@@ -133,6 +133,13 @@ def mine():
         return jsonify(response), 500
 
 
+@app.route('/transactions', methods=['GET'])
+def get_open_transactions():
+    transactions = block_chain.get_open_transactions()
+    tx_display = [tx.__dict__ for tx in transactions]
+    return jsonify(tx_display), 200
+
+
 @app.route('/chain', methods=['GET'])
 def get_chain():
     chain_snapshot = block_chain.get_chain()
