@@ -1,6 +1,6 @@
 # import os
 # import logging
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from wallet import Wallet
@@ -69,6 +69,43 @@ def get_balance():
         'wallet_setup': wallet.public_key is not None
     }
     return jsonify(response), 500
+
+
+@app.route('/transaction', methods=['POST'])
+def add_transaction():
+    if wallet.public_key is None:
+        response = {'message': 'No wallet setup'}
+        return jsonify(response), 400
+
+    user_input = request.get_json()
+    if not user_input:
+        response = {'message': 'No data received'}
+        return jsonify(response), 400
+
+    required_fields = ['recipient', 'amount']
+    if not all(field in user_input for field in required_fields):
+        response = {'message': 'Required data is missing.'}
+        return jsonify(response), 400
+
+    recipient = user_input['recipient']
+    amount = user_input['amount']
+    signature = wallet.sign_transaction(wallet.public_key, recipient, amount)
+    if block_chain.add_transaction(recipient, wallet.public_key, signature,
+                                   amount):
+        response = {
+            'message': 'Successfully added transaction',
+            'transaction': {
+                'sender': wallet.public_key,
+                'recipient': recipient,
+                'amount': amount,
+                'signature': signature
+            },
+            'funds': block_chain.get_balances()
+        }
+        return jsonify(response), 201
+    else:
+        response = {'message': 'Creating a transaction failed.'}
+        return jsonify(response), 500
 
 
 @app.route('/mine', methods=['POST'])
